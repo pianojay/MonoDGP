@@ -2,7 +2,7 @@ random_seed: 444
 
 dataset:
   type: &dataset_type 'KITTI'
-  root_dir: '../data/kitti'
+  root_dir: '../../data/raw/KITTI_3DOD'
   train_split: 'train'
   test_split: 'val'
   batch_size: 8
@@ -26,14 +26,14 @@ dataset:
   depth_scale: 'normal'
 
 
-model_name: 'monodgp'
+model_name: 'monodgp' # correspond to --model_name
 model:
   num_classes: 3
   return_intermediate_dec: True
   device: 'cuda'
 
   # Backbone
-  backbone: 'resnet50'
+  backbone: 'resnet50' # cf. In MonoDINO-DETR, this can be vitb, vits, ... (DAv2)
   train_backbone: True
   num_feature_levels: 4
   dilation: False
@@ -103,11 +103,11 @@ lr_scheduler:
 
 trainer:
   max_epoch: 250
-  gpu_ids: '1'
+  gpu_ids: '0' # Not working with '0,1'? It seems it cannot parallelize GPU
   save_frequency: 1  # checkpoint save interval (in epoch)
   #resume_model: True
-  #pretrain_model: path/to/ckpt
-  save_path: 'outputs/'
+  #pretrain_model: '../../outputs/mdgp_local ~'
+  save_path: '../../outputs/mdgp_local'
   save_all: False  # False for only savng the best and latest ckpts
   use_dn: False
   scalar: 5
