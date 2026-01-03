@@ -38,6 +38,9 @@ def my_worker_init_fn(worker_id):
 
 
 def build_dataloader(cfg, workers=4, batch_size=None, dist=False, test_dist=False):
+    workers = cfg.get('num_workers', workers)
+    pin_memory = cfg.get('pin_memory', False)
+    persistent_workers = cfg.get('persistent_workers', workers > 0)
     # perpare dataset
     if cfg['type'] == 'KITTI':
         train_set = KITTI_Dataset(split=cfg['train_split'], cfg=cfg)
@@ -61,7 +64,8 @@ def build_dataloader(cfg, workers=4, batch_size=None, dist=False, test_dist=Fals
                               num_workers=workers,
                               worker_init_fn=my_worker_init_fn,
                               shuffle=(train_sampler is None),
-                              pin_memory=False,
+                              pin_memory=pin_memory,
+                              persistent_workers=persistent_workers,
                               drop_last=False,
                               sampler=train_sampler)
     test_loader = DataLoader(dataset=test_set,
@@ -69,7 +73,8 @@ def build_dataloader(cfg, workers=4, batch_size=None, dist=False, test_dist=Fals
                              num_workers=workers,
                              worker_init_fn=my_worker_init_fn,
                              shuffle=False if test_sampler is None else False,
-                             pin_memory=False,
+                             pin_memory=pin_memory,
+                             persistent_workers=persistent_workers,
                              drop_last=False,
                              sampler=test_sampler)
 

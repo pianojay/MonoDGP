@@ -6,6 +6,9 @@ dataset:
   train_split: 'train'
   test_split: 'val'
   batch_size: 8   # total batch size; divided by num_gpus when using DDP
+  num_workers: 4
+  pin_memory: true
+  persistent_workers: true
   use_3d_center: True
   class_merging: False
   use_dontcare: False
