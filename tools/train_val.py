@@ -21,6 +21,7 @@ from lib.helpers.trainer_helper import Trainer
 from lib.helpers.tester_helper import Tester
 from lib.helpers.utils_helper import create_logger
 from lib.helpers.utils_helper import set_random_seed
+from tensorboardX import SummaryWriter
 
 
 parser = argparse.ArgumentParser(description='Monocular 3D Object Detection with Decoupled-Query and Geometry-Error Priors')
@@ -70,6 +71,8 @@ def main():
     # build lr scheduler
     lr_scheduler, warmup_lr_scheduler = build_lr_scheduler(cfg['lr_scheduler'], optimizer, last_epoch=-1)
 
+    tb_log = SummaryWriter(log_dir=str(output_path + '/tensorboard'))
+
     trainer = Trainer(cfg=cfg['trainer'],
                       model=model,
                       optimizer=optimizer,
@@ -79,7 +82,8 @@ def main():
                       warmup_lr_scheduler=warmup_lr_scheduler,
                       logger=logger,
                       loss=loss,
-                      model_name=model_name,)
+                      model_name=model_name,
+                      tb_log=tb_log)
 
     tester = Tester(cfg=cfg['tester'],
                     model=trainer.model,

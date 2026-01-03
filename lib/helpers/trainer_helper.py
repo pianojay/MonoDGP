@@ -23,7 +23,8 @@ class Trainer(object):
                  warmup_lr_scheduler,
                  logger,
                  loss,
-                 model_name):
+                 model_name,
+                 tb_log=None):
         self.cfg = cfg
         self.model = model
         self.optimizer = optimizer
@@ -40,6 +41,7 @@ class Trainer(object):
         self.model_name = model_name
         self.output_dir = os.path.join('./' + cfg['save_path'], model_name)
         self.tester = None
+        self.tb_log = tb_log
 
         # loading pretrain/resume model
         if cfg.get('pretrain_model'):
@@ -73,7 +75,7 @@ class Trainer(object):
             # ref: https://github.com/pytorch/pytorch/issues/5059
             np.random.seed(np.random.get_state()[1][0] + epoch)
             # train one epoch
-            self.train_one_epoch(epoch)
+            self.train_one_epoch(epoch, tb_log=self.tb_log)
             self.epoch += 1
 
             # update learning rate
@@ -110,10 +112,12 @@ class Trainer(object):
             progress_bar.update()
 
         self.logger.info("Best Result:{}, epoch:{}".format(best_result, best_epoch))
+        if self.tb_log is not None:
+            self.tb_log.close()
 
         return None
 
-    def train_one_epoch(self, epoch):
+    def train_one_epoch(self, epoch, tb_log=None):
         torch.set_grad_enabled(True)
         self.model.train()
         print(">>>>>>> Epoch:", str(epoch) + ":")
@@ -170,6 +174,16 @@ class Trainer(object):
             self.optimizer.step()
 
             progress_bar.update()
+            if tb_log is not None:
+                global_step = epoch * len(self.train_loader) + batch_idx
+                try:
+                    cur_lr = float(self.optimizer.lr)
+                except AttributeError:
+                    cur_lr = self.optimizer.param_groups[0]['lr']
+                tb_log.add_scalar('train/loss', detr_losses.item(), global_step)
+                tb_log.add_scalar('meta_dat/lr', cur_lr, global_step)
+                for key, val in detr_losses_dict.items():
+                    tb_log.add_scalar('train/' + key, val.item(), global_step)
         progress_bar.close()
 
     def prepare_targets(self, targets, batch_size):
@@ -188,4 +202,3 @@ class Trainer(object):
                     target_dict[key] = val[bz]
             targets_list.append(target_dict)
         return targets_list
-
