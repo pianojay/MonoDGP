@@ -23,7 +23,8 @@ from lib.helpers.tester_helper import Tester
 from lib.helpers.utils_helper import create_logger
 from lib.helpers.utils_helper import set_random_seed
 from tensorboardX import SummaryWriter
-from lib.helpers import launch, comm
+from lib.helpers.launch import launch
+from lib.helpers import comm
 
 
 def parse_config():
