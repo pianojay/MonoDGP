@@ -5,7 +5,7 @@ dataset:
   root_dir: '../../data/raw/KITTI_3DOD'
   train_split: 'train'
   test_split: 'val'
-  batch_size: 16   # total batch size; divided by num_gpus when using DDP
+  batch_size: 8   # total batch size; divided by num_gpus when using DDP
   use_3d_center: True
   class_merging: False
   use_dontcare: False
