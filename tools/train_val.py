@@ -22,6 +22,7 @@ from lib.helpers.trainer_helper import Trainer
 from lib.helpers.tester_helper import Tester
 from lib.helpers.utils_helper import create_logger
 from lib.helpers.utils_helper import set_random_seed
+from tensorboardX import SummaryWriter
 from lib.helpers import launch, comm
 
 
@@ -113,6 +114,8 @@ def main(args):
     # build lr scheduler
     lr_scheduler, warmup_lr_scheduler = build_lr_scheduler(cfg['lr_scheduler'], optimizer, last_epoch=-1)
 
+    tb_log = SummaryWriter(log_dir=str(output_path + '/tensorboard')) if comm.is_main_process() else None
+
     trainer = Trainer(cfg=cfg['trainer'],
                       model=model,
                       optimizer=optimizer,
@@ -123,6 +126,7 @@ def main(args):
                       logger=logger,
                       loss=loss,
                       model_name=model_name,
+                      tb_log=tb_log,
                       train_sampler=train_sampler,
                       rank=cfg_local_rank,
                       distributed=distributed,
