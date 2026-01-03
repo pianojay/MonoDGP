@@ -23,7 +23,11 @@ class Trainer(object):
                  warmup_lr_scheduler,
                  logger,
                  loss,
-                 model_name):
+                 model_name,
+                 train_sampler=None,
+                 rank=0,
+                 distributed=False,
+                 is_main_process=True):
         self.cfg = cfg
         self.model = model
         self.optimizer = optimizer
@@ -35,11 +39,15 @@ class Trainer(object):
         self.epoch = 0
         self.best_result = 0
         self.best_epoch = 0
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device("cuda", rank) if torch.cuda.is_available() else torch.device("cpu")
         self.detr_loss = loss
         self.model_name = model_name
         self.output_dir = os.path.join('./' + cfg['save_path'], model_name)
         self.tester = None
+        self.train_sampler = train_sampler
+        self.rank = rank
+        self.distributed = distributed
+        self.is_main_process = is_main_process
 
         # loading pretrain/resume model
         if cfg.get('pretrain_model'):
@@ -65,13 +73,15 @@ class Trainer(object):
     def train(self):
         start_epoch = self.epoch
 
-        progress_bar = tqdm.tqdm(range(start_epoch, self.cfg['max_epoch']), dynamic_ncols=True, leave=True, desc='epochs')
+        progress_bar = tqdm.tqdm(range(start_epoch, self.cfg['max_epoch']), dynamic_ncols=True, leave=True, desc='epochs', disable=not self.is_main_process)
         best_result = self.best_result
         best_epoch = self.best_epoch
         for epoch in range(start_epoch, self.cfg['max_epoch']):
             # reset random seed
             # ref: https://github.com/pytorch/pytorch/issues/5059
             np.random.seed(np.random.get_state()[1][0] + epoch)
+            if self.train_sampler is not None and hasattr(self.train_sampler, "set_epoch"):
+                self.train_sampler.set_epoch(epoch)
             # train one epoch
             self.train_one_epoch(epoch)
             self.epoch += 1
@@ -83,7 +93,7 @@ class Trainer(object):
                 self.lr_scheduler.step()
 
             # save trained model
-            if (self.epoch % self.cfg['save_frequency']) == 0:
+            if self.is_main_process and (self.epoch % self.cfg['save_frequency']) == 0:
                 os.makedirs(self.output_dir, exist_ok=True)
                 if self.cfg['save_all']:
                     ckpt_name = os.path.join(self.output_dir, 'checkpoint_epoch_%d' % self.epoch)
@@ -109,16 +119,18 @@ class Trainer(object):
 
             progress_bar.update()
 
-        self.logger.info("Best Result:{}, epoch:{}".format(best_result, best_epoch))
+        if self.is_main_process:
+            self.logger.info("Best Result:{}, epoch:{}".format(best_result, best_epoch))
 
         return None
 
     def train_one_epoch(self, epoch):
         torch.set_grad_enabled(True)
         self.model.train()
-        print(">>>>>>> Epoch:", str(epoch) + ":")
+        if self.is_main_process:
+            print(">>>>>>> Epoch:", str(epoch) + ":")
 
-        progress_bar = tqdm.tqdm(total=len(self.train_loader), leave=(self.epoch+1 == self.cfg['max_epoch']), desc='iters')
+        progress_bar = tqdm.tqdm(total=len(self.train_loader), leave=(self.epoch+1 == self.cfg['max_epoch']), desc='iters', disable=not self.is_main_process)
         for batch_idx, (inputs, calibs, targets, info) in enumerate(self.train_loader):
             inputs = inputs.to(self.device)
             calibs = calibs.to(self.device)
@@ -152,7 +164,7 @@ class Trainer(object):
             detr_losses_dict_log["loss_detr"] = detr_losses_log
 
             flags = [True] * 5
-            if batch_idx % 30 == 0:
+            if self.is_main_process and batch_idx % 30 == 0:
                 print("----", batch_idx, "----")
                 print("%s: %.2f, " %("loss_detr", detr_losses_dict_log["loss_detr"]))
                 for key, val in detr_losses_dict_log.items():
@@ -188,4 +200,3 @@ class Trainer(object):
                     target_dict[key] = val[bz]
             targets_list.append(target_dict)
         return targets_list
-

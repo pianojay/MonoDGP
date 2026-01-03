@@ -5,7 +5,7 @@ dataset:
   root_dir: '../../data/raw/KITTI_3DOD'
   train_split: 'train'
   test_split: 'val'
-  batch_size: 8
+  batch_size: 16   # total batch size; divided by num_gpus when using DDP
   use_3d_center: True
   class_merging: False
   use_dontcare: False
@@ -26,7 +26,7 @@ dataset:
   depth_scale: 'normal'
 
 
-model_name: 'monodgp' # correspond to --model_name
+model_name: 'monodgp_ddp' # correspond to --model_name
 model:
   num_classes: 3
   return_intermediate_dec: True
@@ -103,7 +103,7 @@ lr_scheduler:
 
 trainer:
   max_epoch: 250
-  gpu_ids: '0' # Not working with '0,1'? It seems it cannot parallelize GPU
+  gpu_ids: '0,1'
   save_frequency: 1  # checkpoint save interval (in epoch)
   #resume_model: True
   #pretrain_model: '../../outputs/mdgp_local ~'

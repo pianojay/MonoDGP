@@ -161,6 +161,11 @@ You can modify the settings of models and training in `configs/monodgp.yaml` and
   ```bash
   bash train.sh configs/monodgp.yaml > logs/monodgp.log
   ```
+For multi-GPU DDP training, launch via the script entrypoint:
+  ```bash
+  bash train.sh configs/monodgp.yaml --launcher pytorch --num_gpus 2 --batch_size 16 > logs/monodgp_multi_gpu32_train.log
+  ```
+Here `--batch_size` is the total batch and will be divided evenly across GPUs.
 ### Test
 The best checkpoint will be evaluated as default. You can change it at "tester/checkpoint" in `configs/monodgp.yaml`:
   ```bash
